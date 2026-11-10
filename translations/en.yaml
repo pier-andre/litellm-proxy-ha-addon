@@ -1,0 +1,36 @@
+configuration:
+  master_key:
+    name: LiteLLM master API key
+    description: Bearer key required by clients calling the LiteLLM proxy. Prefer a long value beginning with sk-.
+  config_filename:
+    name: Advanced YAML filename
+    description: YAML file used for migration and when Advanced YAML mode is selected in the Web UI.
+  groq_api_key:
+    name: Groq API key
+    description: Available to visual model definitions as GROQ_API_KEY.
+  gemini_api_key:
+    name: Gemini API key
+    description: Available as GEMINI_API_KEY and GOOGLE_API_KEY.
+  nvidia_api_key:
+    name: NVIDIA NIM API key
+    description: Available as NVIDIA_NIM_API_KEY.
+  openai_api_key:
+    name: OpenAI API key
+    description: Optional. Available as OPENAI_API_KEY.
+  anthropic_api_key:
+    name: Anthropic API key
+    description: Optional. Available as ANTHROPIC_API_KEY.
+  openrouter_api_key:
+    name: OpenRouter API key
+    description: Optional. Available as OPENROUTER_API_KEY.
+  xai_api_key:
+    name: xAI API key
+    description: Optional. Available as XAI_API_KEY.
+  mistral_api_key:
+    name: Mistral API key
+    description: Optional. Available as MISTRAL_API_KEY.
+  debug:
+    name: Detailed LiteLLM debug logging
+    description: Enable only while troubleshooting; detailed provider logs can be verbose and may expose request metadata.
+network:
+  4000/tcp: LiteLLM OpenAI-compatible API

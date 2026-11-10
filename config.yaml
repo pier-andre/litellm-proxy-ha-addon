@@ -1,0 +1,41 @@
+name: "LiteLLM Proxy"
+version: "0.4.4"
+slug: "litellm_proxy"
+description: "Database-free LiteLLM gateway with a Home Assistant Ingress model and fallback router manager"
+url: "https://github.com/pier-andre/litellm-proxy-ha-addon"
+startup: application
+boot: auto
+init: false
+arch:
+  - amd64
+  - aarch64
+map:
+  - type: addon_config
+    read_only: false
+ingress: true
+ingress_port: 8099
+panel_icon: "mdi:router-network"
+panel_title: "LiteLLM Router"
+panel_admin: true
+ports:
+  4000/tcp: 4000
+ports_description:
+  4000/tcp: "LiteLLM OpenAI-compatible API"
+watchdog: "http://[HOST]:[PORT:4000]/health/liveliness"
+options:
+  master_key: null
+  config_filename: "litellm_config.yaml"
+  debug: false
+schema:
+  master_key: password
+  config_filename: "match(^[A-Za-z0-9._-]+\\.ya?ml$)"
+  groq_api_key: password?
+  gemini_api_key: password?
+  nvidia_api_key: password?
+  openai_api_key: password?
+  anthropic_api_key: password?
+  openrouter_api_key: password?
+  xai_api_key: password?
+  mistral_api_key: password?
+  debug: bool
+

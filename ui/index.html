@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiteLLM Router Manager</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --text: #17212b;
+  --muted: #637083;
+  --border: #d8dee6;
+  --primary: #03a9f4;
+  --primary-strong: #0288d1;
+  --danger: #c62828;
+  --ok: #2e7d32;
+  --warn: #b26a00;
+  --shadow: 0 2px 10px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101418;
+    --surface: #1a2026;
+    --surface-2: #222a31;
+    --text: #edf2f7;
+    --muted: #aab5c0;
+    --border: #36414b;
+    --primary: #29b6f6;
+    --primary-strong: #039be5;
+    --danger: #ef5350;
+    --ok: #66bb6a;
+    --warn: #ffb74d;
+    --shadow: 0 2px 12px rgba(0,0,0,.28);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+.header-inner { max-width: 1180px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: white; background: linear-gradient(135deg,var(--primary),#7c4dff); font-weight: 800; }
+h1 { font-size: 19px; margin: 0; }
+.subtle { color: var(--muted); font-size: 13px; }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 18px calc(60px + env(safe-area-inset-bottom, 0px)); }
+body.mobile-dirty main { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button, select, input, textarea { font: inherit; }
+button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+button:hover { border-color: var(--primary); }
+button.primary { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+button.primary:hover { background: var(--primary-strong); }
+button.danger { color: var(--danger); }
+button.small { padding: 5px 8px; font-size: 12px; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+.card-head { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.card-body { padding: 16px; }
+.grid { display: grid; grid-template-columns: repeat(12,1fr); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.field input, .field select, textarea { width: 100%; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 7px; padding: 8px 9px; }
+.field input:focus, .field select:focus, textarea:focus { outline: 2px solid color-mix(in srgb,var(--primary) 35%, transparent); border-color: var(--primary); }
+.col-1 { grid-column: span 1; } .col-2 { grid-column: span 2; } .col-3 { grid-column: span 3; } .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
+@media (max-width: 760px) {
+  .grid > * { grid-column: 1 / -1 !important; }
+  .header-inner { align-items: flex-start; flex-direction: column; }
+  button.small { min-height: 44px; padding: 10px 14px; font-size: 13px; }
+  label.switch { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 11px 10px 11px 4px; margin: -11px 0; box-sizing: content-box; }
+  .card-head { flex-wrap: wrap; }
+  .card-head > button { min-height: 44px; flex: 1 1 auto; }
+}
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.ok { background: var(--ok); } .dot.bad { background: var(--danger); } .dot.warn { background: var(--warn); }
+.notice { padding: 11px 13px; border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 8px; background: var(--surface-2); margin-bottom: 16px; font-size: 13px; }
+.notice.warn { border-left-color: var(--warn); }
+.notice.error { border-left-color: var(--danger); }
+.model-row { border: 1px solid var(--border); border-radius: 9px; padding: 12px; margin-bottom: 10px; background: var(--surface-2); }
+.route { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+.route-head { padding: 11px 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.route-head-main { display: flex; flex: 1 1 180px; gap: 10px; align-items: center; min-width: 0; }
+.route-head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.route-name { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 7px; padding: 8px 9px; }
+@media (max-width: 760px) {
+  .route-head { flex-direction: column; align-items: stretch; }
+  .route-head-main { flex: none; width: 100%; }
+  .route-head-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .route-head-actions button { width: 100%; min-height: 44px; }
+}
+.member { display: grid; grid-template-columns: 52px minmax(150px,1fr) minmax(130px,1fr) 110px; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.member:last-child { border-bottom: 0; }
+@media (max-width:760px) {
+  .member { grid-template-columns: 52px 1fr; }
+  .member .provider { grid-column: 2; }
+  .member .move { grid-column: 1 / -1; display: flex; gap: 8px; padding: 4px 0 0 44px; }
+  .member .move button { flex: 1; min-height: 44px; }
+}
+.settings-details { margin-bottom: 16px; }
+.settings-details > summary { list-style: none; cursor: pointer; padding: 14px 16px; font-weight: 700; border-bottom: 1px solid transparent; }
+.settings-details > summary::-webkit-details-marker { display: none; }
+.settings-details[open] > summary { border-bottom-color: var(--border); }
+.settings-details > summary .settings-summary-hint { display: block; font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.settings-details > .card-body { padding-top: 12px; }
+.mobile-save-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; padding: 12px 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -2px 10px rgba(0,0,0,.08); }
+.mobile-save-bar button { width: 100%; min-height: 48px; font-size: 16px; }
+@media (min-width: 761px) { .mobile-save-bar { display: none !important; } }
+.switch { position: relative; width: 38px; height: 22px; display: inline-block; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: #89939d; border-radius: 20px; transition: .15s; }
+.slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .15s; }
+.switch input:checked + .slider { background: var(--primary); }
+.switch input:checked + .slider:before { transform: translateX(16px); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab { padding: 10px 14px; border: 0; border-radius: 0; background: transparent; border-bottom: 3px solid transparent; }
+.tab.active { border-bottom-color: var(--primary); font-weight: 700; }
+.hidden { display: none !important; }
+pre, textarea.code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; font-size: 12px; }
+textarea.code { min-height: 440px; resize: vertical; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--border); padding: 12px; border-radius: 8px; max-height: 500px; overflow: auto; }
+.toast { position: fixed; right: 18px; left: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); max-width: min(520px, calc(100vw - 36px)); margin-left: auto; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--primary); box-shadow: var(--shadow); border-radius: 9px; padding: 12px 14px; z-index: 20; }
+body.mobile-dirty .toast { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+.toast.error { border-left-color: var(--danger); }
+.test-result { margin-top: 7px; font-size: 12px; color: var(--muted); }
+.test-history { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); }
+.test-history .summary { margin-right: 2px; }
+.history-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.history-chip.ok { border-color: color-mix(in srgb,var(--ok) 55%, var(--border)); }
+.history-chip.bad { border-color: color-mix(in srgb,var(--danger) 55%, var(--border)); }
+.chain { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 12px; color: var(--muted); margin-top: 8px; overflow-wrap: anywhere; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand"><div class="logo">LL</div><div><h1>LiteLLM Router Manager</h1><div class="subtle" id="versionText">Home Assistant add-on</div></div></div>
+    <div class="toolbar">
+      <span class="status-pill"><span id="runtimeDot" class="dot"></span><span id="runtimeText">Loading…</span></span>
+      <button id="reloadBtn">Reload</button>
+      <button id="saveBtn" class="primary">Save &amp; Apply</button>
+    </div>
+  </div>
+</header>
+<main>
+  <div id="migrationNotice" class="notice hidden"></div>
+  <div id="warningNotice" class="notice warn hidden"></div>
+
+  <details id="routerSettingsPanel" class="card settings-details" open>
+    <summary>Router settings<span class="settings-summary-hint">Mode, retries, cooldown, and LiteLLM options</span></summary>
+    <div class="card-body">
+      <div class="grid">
+        <div class="field col-4">
+          <label>Configuration mode</label>
+          <select id="modeSelect">
+            <option value="visual">Visual Router Manager</option>
+            <option value="yaml">Advanced YAML</option>
+          </select>
+        </div>
+        <div class="field col-2">
+          <label>Retries per hop</label>
+          <input id="numRetries" type="number" min="0" max="5">
+        </div>
+        <div class="field col-2">
+          <label>Cooldown (seconds)</label>
+          <input id="cooldown" type="number" min="1" max="3600">
+        </div>
+        <div class="field col-2">
+          <label>Drop unsupported params</label>
+          <select id="dropParams"><option value="true">Yes</option><option value="false">No</option></select>
+        </div>
+        <div class="field col-2">
+          <label>LiteLLM telemetry</label>
+          <select id="telemetry"><option value="false">Off</option><option value="true">On</option></select>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <section id="visualSection">
+    <div class="tabs">
+      <button class="tab active" data-tab="routes">Routes</button>
+      <button class="tab" data-tab="models">Models</button>
+      <button class="tab" data-tab="yamlpreview">Generated YAML</button>
+    </div>
+
+    <div id="routesTab">
+      <div class="card">
+        <div class="card-head"><div><strong>Routing groups</strong><div class="subtle">Toggle models on/off per group and arrange the fallback order.</div></div><button id="addRouteBtn">+ Add route</button></div>
+        <div class="card-body" id="routesContainer"></div>
+      </div>
+    </div>
+
+    <div id="modelsTab" class="hidden">
+      <div class="card">
+        <div class="card-head"><div><strong>Model definitions</strong><div class="subtle">Provider credentials remain in the Home Assistant Configuration tab.</div></div><button id="addModelBtn">+ Add model</button></div>
+        <div class="card-body" id="modelsContainer"></div>
+      </div>
+    </div>
+
+    <div id="yamlpreviewTab" class="hidden">
+      <div class="card">
+        <div class="card-head"><div><strong>Generated LiteLLM YAML</strong><div class="subtle">Read-only. Visual mode overwrites this file on apply.</div></div><button id="refreshYamlBtn">Refresh</button></div>
+        <div class="card-body"><pre id="generatedYaml">Not generated yet.</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="advancedSection" class="hidden">
+    <div class="notice warn">Advanced YAML is an escape hatch. In this mode the visual model/route controls are not used. Provider secrets should still be referenced as <code>os.environ/…</code> rather than written directly into YAML.</div>
+    <div class="card">
+      <div class="card-head"><div><strong>Advanced LiteLLM YAML</strong><div id="advancedPath" class="subtle"></div></div></div>
+      <div class="card-body"><textarea id="advancedYaml" class="code" spellcheck="false"></textarea></div>
+    </div>
+  </section>
+</main>
+<div id="mobileSaveBar" class="mobile-save-bar hidden" aria-live="polite">
+  <button type="button" id="saveBtnBottom" class="primary">Save &amp; Apply</button>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script>
+const pathBase = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+const apiUrl = (name) => pathBase + 'api/' + name;
+let state = null;
+let credentials = {};
+let advancedYaml = '';
+let testHistory = {};
+let dirty = false;
+
+const providerDefaults = {
+  groq: {env:'GROQ_API_KEY', base:''},
+  gemini: {env:'GEMINI_API_KEY', base:''},
+  nvidia_nim: {env:'NVIDIA_NIM_API_KEY', base:'https://integrate.api.nvidia.com/v1'},
+  ollama: {env:'', base:''},
+  openai: {env:'OPENAI_API_KEY', base:''},
+  anthropic: {env:'ANTHROPIC_API_KEY', base:''},
+  openrouter: {env:'OPENROUTER_API_KEY', base:''},
+  xai: {env:'XAI_API_KEY', base:''},
+  mistral: {env:'MISTRAL_API_KEY', base:''},
+  custom: {env:'', base:''}
+};
+const envChoices = ['', 'GROQ_API_KEY','GEMINI_API_KEY','GOOGLE_API_KEY','NVIDIA_NIM_API_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY','OPENROUTER_API_KEY','XAI_API_KEY','MISTRAL_API_KEY'];
+const reasoningEffortChoices = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+function reasoningHint(m){
+  if(m?.provider==='nvidia_nim') return 'Disabled for NVIDIA NIM: the current LiteLLM adapter rejects explicit reasoning_effort. Default is always used.';
+  return 'Provider support varies; Default omits the parameter.';
+}
+function reasoningDisabled(m){ return m?.provider==='nvidia_nim'; }
+
+function historyHtml(id){
+  const h=testHistory?.[id] || {};
+  const entries=Array.isArray(h.entries) ? h.entries : [];
+  if(!entries.length) return '<span class="subtle">No model tests recorded yet.</span>';
+  const median=h.median_latency_ms==null ? '—' : `${h.median_latency_ms} ms`;
+  const summary=`${h.successes||0}/${h.total||0} successful · median ${median}`;
+  const chips=entries.map(e=>{
+    const status=e.status==null ? 'ERR' : String(e.status);
+    const ms=e.latency_ms==null ? '—' : `${e.latency_ms} ms`;
+    return `<span class="history-chip ${e.ok?'ok':'bad'}">${e.ok?'✓':'✗'} ${esc(status)} · ${esc(ms)}</span>`;
+  }).join('');
+  return `<span class="summary">Recent tests: ${esc(summary)}</span>${chips}`;
+}
+
+function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function toast(message, error=false) {
+  const el = document.getElementById('toast'); el.textContent = message; el.className = 'toast' + (error ? ' error' : '');
+  setTimeout(() => el.classList.add('hidden'), 5000);
+}
+function isMobileLayout() { return window.matchMedia('(max-width: 760px)').matches; }
+function syncSettingsPanelOpen() {
+  const panel = document.getElementById('routerSettingsPanel');
+  if (!panel) return;
+  if (isMobileLayout()) panel.removeAttribute('open');
+  else panel.setAttribute('open', '');
+}
+function updateSaveUi() {
+  const label = dirty ? 'Save & Apply *' : 'Save & Apply';
+  document.getElementById('saveBtn').textContent = label;
+  const bottom = document.getElementById('saveBtnBottom');
+  if (bottom) bottom.textContent = label;
+  const bar = document.getElementById('mobileSaveBar');
+  const showBar = dirty && isMobileLayout();
+  if (bar) bar.classList.toggle('hidden', !showBar);
+  document.body.classList.toggle('mobile-dirty', showBar);
+}
+function markDirty(){ dirty = true; updateSaveUi(); }
+function markClean(){ dirty = false; updateSaveUi(); }
+function preserveScroll(run) {
+  const y = window.scrollY;
+  run();
+  window.scrollTo(0, y);
+}
+function setSaveDisabled(disabled) {
+  document.getElementById('saveBtn').disabled = disabled;
+  const bottom = document.getElementById('saveBtnBottom');
+  if (bottom) bottom.disabled = disabled;
+}
+async function request(name, opts={}) {
+  const res = await fetch(apiUrl(name), {cache:'no-store', ...opts});
+  const data = await res.json().catch(()=>({error:'Invalid JSON response'}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+function modelById(id){ return state.models.find(m => m.id === id); }
+function ensureRouteMembers() {
+  for (const r of state.routes) {
+    const seen = new Set(r.members.map(m=>m.model_id));
+    for (const m of state.models) if (!seen.has(m.id)) r.members.push({model_id:m.id,active:false});
+    r.members = r.members.filter(x => state.models.some(m=>m.id===x.model_id));
+  }
+}
+function updateModeVisibility() {
+  const visual = document.getElementById('modeSelect').value === 'visual';
+  document.getElementById('visualSection').classList.toggle('hidden', !visual);
+  document.getElementById('advancedSection').classList.toggle('hidden', visual);
+}
+function pullSettings() {
+  state.mode = document.getElementById('modeSelect').value;
+  state.settings.num_retries = Number(document.getElementById('numRetries').value || 0);
+  state.settings.cooldown_time = Number(document.getElementById('cooldown').value || 60);
+  state.settings.drop_params = document.getElementById('dropParams').value === 'true';
+  state.settings.telemetry = document.getElementById('telemetry').value === 'true';
+  advancedYaml = document.getElementById('advancedYaml').value;
+}
+function renderRuntime(runtime) {
+  const dot = document.getElementById('runtimeDot'), txt = document.getElementById('runtimeText');
+  dot.className = 'dot ' + (runtime?.healthy ? 'ok' : runtime?.running ? 'warn' : 'bad');
+  txt.textContent = runtime?.healthy ? 'LiteLLM healthy' : runtime?.running ? 'LiteLLM starting/unhealthy' : 'LiteLLM stopped';
+}
+function credentialBadge(env) {
+  if (!env) return '<span class="status-pill"><span class="dot ok"></span>No API key</span>';
+  const ok = !!credentials[env];
+  return `<span class="status-pill"><span class="dot ${ok?'ok':'bad'}"></span>${esc(env)} ${ok?'configured':'missing'}</span>`;
+}
+function renderModels() {
+  preserveScroll(() => renderModelsInner());
+}
+function renderModelsInner() {
+  const c = document.getElementById('modelsContainer');
+  if (!state.models.length) { c.innerHTML='<div class="subtle">No models configured.</div>'; return; }
+  c.innerHTML = state.models.map((m,i)=>`
+    <div class="model-row" data-model-index="${i}">
+      <div class="grid">
+        <div class="field col-3"><label>Display name</label><input data-f="name" value="${esc(m.name)}"></div>
+        <div class="field col-2"><label>Model ID</label><input data-f="id" value="${esc(m.id)}"></div>
+        <div class="field col-2"><label>Provider</label><select data-f="provider">${Object.keys(providerDefaults).map(p=>`<option value="${p}" ${p===m.provider?'selected':''}>${p}</option>`).join('')}</select></div>
+        <div class="field col-5"><label>Provider model name</label><input data-f="model" value="${esc(m.model)}"></div>
+        <div class="field col-3"><label>Credential environment</label><select data-f="api_key_env">${envChoices.map(e=>`<option value="${e}" ${e===m.api_key_env?'selected':''}>${e||'(none)'}</option>`).join('')}</select></div>
+        <div class="field col-4"><label>API base (optional / required for local/custom)</label><input data-f="api_base" value="${esc(m.api_base||'')}"></div>
+        <div class="field col-2"><label>Timeout (s)</label><input data-f="timeout" type="number" min="5" max="900" value="${esc(m.timeout)}"></div>
+        <div class="field col-2"><label>Reasoning effort</label><select data-f="reasoning_effort" title="${esc(reasoningHint(m))}" ${reasoningDisabled(m)?'disabled':''}>${reasoningEffortChoices.map(e=>`<option value="${e}" ${e===(m.reasoning_effort||'')?'selected':''}>${e||'Default'}</option>`).join('')}</select><div class="subtle">${esc(reasoningHint(m))}</div></div>
+        <div class="field col-1"><label>Zero cost</label><select data-f="zero_cost"><option value="false" ${!m.zero_cost?'selected':''}>No</option><option value="true" ${m.zero_cost?'selected':''}>Yes</option></select></div>
+        <div class="col-12 toolbar"><span id="cred-${esc(m.id)}">${credentialBadge(m.api_key_env)}</span><button class="small test-model" data-id="${esc(m.id)}">Test model</button><button class="small danger delete-model" data-id="${esc(m.id)}">Delete</button><span class="test-result" id="model-test-${esc(m.id)}"></span></div>
+        <div class="col-12 test-history" id="model-history-${esc(m.id)}">${historyHtml(m.id)}</div>
+      </div>
+    </div>`).join('');
+  c.querySelectorAll('.model-row').forEach(row=>{
+    const idx = Number(row.dataset.modelIndex);
+    row.querySelectorAll('[data-f]').forEach(inp=> inp.addEventListener('change', ()=>{
+      const f=inp.dataset.f; let v=inp.value;
+      if (f==='timeout') v=Number(v); if (f==='zero_cost') v=v==='true';
+      if (f==='id') {
+        const oldId=state.models[idx].id;
+        state.models[idx].id=v;
+        for(const route of state.routes) for(const member of route.members) if(member.model_id===oldId) member.model_id=v;
+      } else if (f==='provider') {
+        const oldEnv=state.models[idx].api_key_env;
+        state.models[idx][f]=v;
+        const d=providerDefaults[v];
+        const envSel=row.querySelector('[data-f="api_key_env"]'); const baseInput=row.querySelector('[data-f="api_base"]');
+        if (!envSel.value || envSel.value===oldEnv) { envSel.value=d.env; state.models[idx].api_key_env=d.env; }
+        if (!baseInput.value && d.base) { baseInput.value=d.base; state.models[idx].api_base=d.base; }
+        if (v==='nvidia_nim') state.models[idx].reasoning_effort='';
+        markDirty(); ensureRouteMembers(); renderModels(); renderRoutes(); return;
+      } else state.models[idx][f]=v;
+      markDirty(); ensureRouteMembers(); renderRoutes();
+    }));
+  });
+  c.querySelectorAll('.delete-model').forEach(b=>b.addEventListener('click',()=>{
+    if (!confirm('Delete this model definition from all routes?')) return;
+    state.models=state.models.filter(m=>m.id!==b.dataset.id); ensureRouteMembers(); markDirty(); renderModels(); renderRoutes();
+  }));
+  c.querySelectorAll('.test-model').forEach(b=>b.addEventListener('click',()=>testModel(b.dataset.id,b)));
+}
+function routeChain(r) {
+  const active = r.members.filter(x=>x.active).map(x=>modelById(x.model_id)?.name || x.model_id);
+  return active.length ? active.join(' → ') : '(no active models)';
+}
+function renderRoutes() {
+  preserveScroll(() => renderRoutesInner());
+}
+function renderRoutesInner() {
+  ensureRouteMembers();
+  const c=document.getElementById('routesContainer');
+  if (!state.routes.length) { c.innerHTML='<div class="subtle">No routes configured.</div>'; return; }
+  c.innerHTML=state.routes.map((r,ri)=>`
+    <div class="route" data-route-index="${ri}">
+      <div class="route-head">
+        <div class="route-head-main">
+          <label class="switch" title="Enable route"><input class="route-enabled" type="checkbox" ${r.enabled?'checked':''}><span class="slider"></span></label>
+          <input class="route-name" value="${esc(r.name)}" aria-label="Route name">
+        </div>
+        <div class="route-head-actions">
+          <button class="small test-route" type="button">Test applied route</button>
+          <button class="small danger delete-route" type="button">Delete</button>
+        </div>
+      </div>
+      <div class="chain">${esc(routeChain(r))}</div>
+      <div>${r.members.map((mem,mi)=>{const m=modelById(mem.model_id); return `<div class="member" data-member-index="${mi}">
+        <label class="switch"><input class="member-active" type="checkbox" ${mem.active?'checked':''}><span class="slider"></span></label>
+        <div><strong>${esc(m?.name || mem.model_id)}</strong><div class="subtle">${esc(m?.model||'')} · ${esc(m?.timeout||45)}s${m?.reasoning_effort ? ' · effort '+esc(m.reasoning_effort) : ''}</div></div>
+        <div class="provider">${esc(m?.provider||'')} ${credentialBadge(m?.api_key_env||'')}</div>
+        <div class="move"><button class="small move-up" title="Move up">↑</button> <button class="small move-down" title="Move down">↓</button></div>
+      </div>`}).join('')}</div>
+      <div class="card-body"><span class="test-result" id="route-test-${ri}"></span></div>
+    </div>`).join('');
+  c.querySelectorAll('.route').forEach(row=>{
+    const ri=Number(row.dataset.routeIndex), r=state.routes[ri];
+    row.querySelector('.route-enabled').addEventListener('change',e=>{r.enabled=e.target.checked;markDirty();renderRoutes();});
+    row.querySelector('.route-name').addEventListener('change',e=>{r.name=e.target.value.trim();markDirty();});
+    row.querySelector('.delete-route').addEventListener('click',()=>{if(confirm('Delete this route?')){state.routes.splice(ri,1);markDirty();renderRoutes();}});
+    row.querySelector('.test-route').addEventListener('click',e=>testRoute(r.name,e.target,ri));
+    row.querySelectorAll('.member').forEach(mrow=>{
+      const mi=Number(mrow.dataset.memberIndex);
+      mrow.querySelector('.member-active').addEventListener('change',e=>{r.members[mi].active=e.target.checked;markDirty();renderRoutes();});
+      mrow.querySelector('.move-up').addEventListener('click',()=>{if(mi>0){[r.members[mi-1],r.members[mi]]=[r.members[mi],r.members[mi-1]];markDirty();renderRoutes();}});
+      mrow.querySelector('.move-down').addEventListener('click',()=>{if(mi<r.members.length-1){[r.members[mi+1],r.members[mi]]=[r.members[mi],r.members[mi+1]];markDirty();renderRoutes();}});
+    });
+  });
+}
+function newId(base) {
+  let id=base.toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'')||'model'; let x=id,n=2;
+  while(state.models.some(m=>m.id===x)){x=id+'-'+n++;} return x;
+}
+function addModel() {
+  const id=newId('new-model');
+  state.models.push({id,name:'New model',provider:'groq',model:'',api_key_env:'GROQ_API_KEY',api_base:'',timeout:45,reasoning_effort:'',zero_cost:false});
+  for(const r of state.routes) r.members.push({model_id:id,active:false});
+  markDirty(); renderModels(); renderRoutes();
+}
+function addRoute() {
+  let n=state.routes.length+1, name='route-'+n; while(state.routes.some(r=>r.name===name)){name='route-'+(++n);}
+  state.routes.push({id:Math.random().toString(36).slice(2,12),name,enabled:true,members:state.models.map(m=>({model_id:m.id,active:false}))});
+  markDirty(); renderRoutes();
+}
+async function testModel(id, btn) {
+  btn.disabled=true; const el=document.getElementById('model-test-'+id); el.textContent='Testing…';
+  try {
+    const r=await request('test-model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model_id:id})});
+    const timing=r.latency_ms==null?'':` · ${r.latency_ms} ms`;
+    el.textContent=r.ok?`✓ ${r.status}${timing} · ${r.served_model||''} ${r.response||''}`:`✗ ${r.status||''}${timing} ${r.error||''}`;
+    if(r.history){testHistory[id]=r.history; const h=document.getElementById('model-history-'+id); if(h) h.innerHTML=historyHtml(id);}
+  }
+  catch(e){el.textContent='✗ '+e.message;} finally {btn.disabled=false;}
+}
+async function testRoute(name, btn, ri) {
+  btn.disabled=true; const el=document.getElementById('route-test-'+ri); el.textContent='Testing applied configuration…';
+  try { const r=await request('test-route',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({route_name:name})}); el.textContent=r.ok?`✓ ${r.status} · ${r.latency_ms} ms · served ${r.served_model||'unknown'} · ${r.response||''}`:`✗ ${r.status||''} ${r.error||''}`; }
+  catch(e){el.textContent='✗ '+e.message;} finally{btn.disabled=false;}
+}
+async function refreshGenerated(){ try{const r=await request('generated');document.getElementById('generatedYaml').textContent=r.yaml||'(empty)';}catch(e){toast(e.message,true);} }
+function renderAll(payload) {
+  state=payload.state; credentials=payload.credentials||{}; testHistory=payload.test_history||{}; advancedYaml=payload.advanced_yaml||'';
+  document.getElementById('versionText').textContent=`Home Assistant add-on v${payload.version}`;
+  renderRuntime(payload.runtime);
+  document.getElementById('modeSelect').value=state.mode;
+  document.getElementById('numRetries').value=state.settings.num_retries;
+  document.getElementById('cooldown').value=state.settings.cooldown_time;
+  document.getElementById('dropParams').value=String(state.settings.drop_params);
+  document.getElementById('telemetry').value=String(state.settings.telemetry);
+  document.getElementById('advancedYaml').value=advancedYaml;
+  document.getElementById('advancedPath').textContent=payload.advanced_yaml_path||'';
+  const migration=state.migration||{}, mn=document.getElementById('migrationNotice');
+  if(migration.imported_from){mn.textContent=`Imported existing YAML into Visual Router Manager. Original source: ${migration.imported_from}`;mn.classList.remove('hidden');}
+  else if(migration.import_error){mn.textContent=`Automatic visual import was not safe, so Advanced YAML mode was preserved: ${migration.import_error}`;mn.classList.remove('hidden');mn.classList.add('warn');}
+  else mn.classList.add('hidden');
+  ensureRouteMembers(); renderModels(); renderRoutes(); updateModeVisibility(); markClean(); syncSettingsPanelOpen();
+}
+async function load() {
+  try { const p=await request('state'); renderAll(p); }
+  catch(e){toast('Could not load router state: '+e.message,true);}
+}
+async function save() {
+  pullSettings(); setSaveDisabled(true);
+  try {
+    const p=await request('apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state,advanced_yaml:advancedYaml})});
+    state=p.state; renderRuntime(p.runtime); markClean(); renderModels(); renderRoutes();
+    if(p.warnings?.length){const n=document.getElementById('warningNotice');n.textContent=p.warnings.join(' · ');n.classList.remove('hidden');}
+    else document.getElementById('warningNotice').classList.add('hidden');
+    toast('Configuration saved and LiteLLM restarted successfully.');
+    await refreshGenerated();
+  } catch(e){toast(e.message,true);} finally {setSaveDisabled(false);}
+}
+
+document.getElementById('reloadBtn').addEventListener('click',()=>{if(!dirty||confirm('Discard unsaved changes?'))load();});
+document.getElementById('saveBtn').addEventListener('click',save);
+document.getElementById('saveBtnBottom').addEventListener('click',save);
+window.addEventListener('resize',()=>{ syncSettingsPanelOpen(); updateSaveUi(); });
+syncSettingsPanelOpen();
+document.getElementById('addModelBtn').addEventListener('click',addModel);
+document.getElementById('addRouteBtn').addEventListener('click',addRoute);
+document.getElementById('refreshYamlBtn').addEventListener('click',refreshGenerated);
+document.getElementById('modeSelect').addEventListener('change',()=>{state.mode=document.getElementById('modeSelect').value;updateModeVisibility();markDirty();});
+['numRetries','cooldown','dropParams','telemetry','advancedYaml'].forEach(id=>document.getElementById(id).addEventListener('change',markDirty));
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+  ['routes','models','yamlpreview'].forEach(n=>document.getElementById(n+'Tab').classList.toggle('hidden',n!==t.dataset.tab));
+  if(t.dataset.tab==='yamlpreview')refreshGenerated();
+}));
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+load();
+</script>
+</body>
+</html>
