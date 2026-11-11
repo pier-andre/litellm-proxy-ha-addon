@@ -1,4 +1,4 @@
-FROM ghcr.io/berriai/litellm:v1.106.6
+FROM ghcr.io/berriai/litellm:v1.109.0
 
 ARG BUILD_VERSION
 ARG BUILD_ARCH

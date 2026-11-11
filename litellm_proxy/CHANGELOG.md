@@ -2,6 +2,7 @@
 
 ## Non publié
 
+- 2026-11-11 — `ghcr.io/berriai/litellm` v1.106.6 → v1.109.0 (mise à jour mineure)
 ## 0.4.5
 
 - Moved the add-on into `litellm_proxy/`, next to its `CHANGELOG.md`: the folder name is the slug, which is what the app store and the repository's `renovate.json` expect.
