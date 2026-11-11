@@ -1,8 +1,8 @@
 name: "LiteLLM Proxy"
-version: "0.4.4"
+version: "0.4.5"
 slug: "litellm_proxy"
 description: "Database-free LiteLLM gateway with a Home Assistant Ingress model and fallback router manager"
-url: "https://github.com/pier-andre/litellm-proxy-ha-addon"
+url: "https://github.com/pier-andre/litellm-proxy-ha-addon/tree/main/litellm_proxy"
 startup: application
 boot: auto
 init: false

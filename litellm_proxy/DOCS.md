@@ -254,8 +254,10 @@ The package deliberately does not require PostgreSQL, Redis, or LiteLLM database
 
 The Supervisor Configuration page contains only live settings: the LiteLLM master key, optional provider API keys, Advanced YAML filename, and debug switch. The old v0.2 migration-only provider/model/order/timeout fields have been removed from the add-on schema. Model IDs, API bases, timeouts, enable/disable state, and fallback order now belong in the Visual Router Manager.
 
-## Updating the local add-on
+## Updating
 
-Keep the same slug (`litellm_proxy`). Replace the files under `/addons/litellm_proxy/`, reload the Home Assistant app/add-on store, then rebuild/update the existing installation.
+Installed from this repository: use **Update** on the app when a new version is offered (or ⋮ → **Check for updates** in the app store). The version comes from `litellm_proxy/config.yaml` and this changelog tab shows `litellm_proxy/CHANGELOG.md`. Because no prebuilt image is published, an update rebuilds the image on your device on top of the newly pinned upstream LiteLLM image.
+
+Updating a local `/addons` copy: keep the same slug (`litellm_proxy`), replace the files under `/addons/litellm_proxy/`, reload the Home Assistant app/add-on store, then rebuild/update the existing installation.
 
 Do not uninstall first if you want to preserve Supervisor options and the persistent add-on configuration directory. Take a Home Assistant backup before a manual update.

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":timezone(Europe/Paris)"],
+  "schedule": ["before 7am on monday"],
+  "prHourlyLimit": 2,
+  "bumpVersions": [
+    {
+      "description": "Chaque mise à jour incrémente le patch de l'add-on (0.4.5 -> 0.4.6)",
+      "filePatterns": ["*/config.yaml"],
+      "matchStrings": ["(?:^|\\n)version:[ \\t]*\"?(?<version>\\d+\\.\\d+\\.\\d+)\"?"],
+      "bumpType": "patch"
+    }
+  ],
+  "postUpgradeTasks": {
+    "commands": [
+      "node /opt/renovate-scripts/changelog.mjs {{{depName}}} {{{currentVersion}}} {{{newVersion}}} {{{updateType}}} addons"
+    ],
+    "fileFilters": ["**/CHANGELOG.md"],
+    "executionMode": "branch"
+  },
+  "prBodyNotes": [
+    "{{#if isMajor}}:warning: **Mise à jour majeure** : vérifiez les notes de version avant de fusionner.{{/if}}",
+    "Cette PR met à jour `FROM ghcr.io/berriai/litellm` dans `litellm_proxy/Dockerfile`, incrémente le `version:` de `litellm_proxy/config.yaml` et ajoute une ligne dans `litellm_proxy/CHANGELOG.md`. Après fusion, Home Assistant proposera la mise à jour (menu ⋮ → Vérifier les mises à jour).",
+    "Rappel : l'image LiteLLM contient du code sous BerriAI Enterprise License. Un add-on litellm ne doit pas être publié sous forme d'image préconstruite (voir `THIRD-PARTY-NOTICES.md`)."
+  ],
+  "packageRules": [
+    {
+      "description": "Regrouper les correctifs dans une seule PR",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "groupName": "correctifs groupés"
+    },
+    {
+      "description": "Une seule PR pour toutes les GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ]
+}

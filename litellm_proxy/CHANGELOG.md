@@ -1,5 +1,13 @@
 # Changelog
 
+## Non publié
+
+## 0.4.5
+
+- Moved the add-on into `litellm_proxy/`, next to its `CHANGELOG.md`: the folder name is the slug, which is what the app store and the repository's `renovate.json` expect.
+- Added `renovate.json` at the repository root: dependency pull requests bump `version:` and add a line to this changelog.
+- Repository URL in `config.yaml` now points at the add-on folder.
+
 ## 0.4.4
 - bump to v1.106.6
 
